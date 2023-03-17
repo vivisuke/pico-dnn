@@ -127,6 +127,40 @@ private:
 };
 //----------------------------------------------------------------------
 
+class ReLU_Layer : public Layer {
+public:
+    ReLU_Layer(int input_size) : input_size_(input_size) {}
+    virtual ~ReLU_Layer() {}
+
+    virtual void forward(const float* input, std::vector<float>& output) override {
+        output.resize(input_size_);
+        output_.resize(input_size_);
+        for (int i = 0; i < input_size_; i++) {
+            output[i] = output_[i] = std::max(0.0f, input[i]);
+        }
+    }
+    void forward(const std::vector<float>& input, std::vector<float>& output) override {
+        // ReLUŠÖ”‚ğ“K—p‚·‚é
+        output.resize(input.size());
+        output_.resize(input.size());
+        for (int i = 0; i < input.size(); i++) {
+            output[i] = output_[i] = std::max(0.0f, input[i]);
+        }
+    }
+
+    void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) override {
+        // ReLUŠÖ”‚Ì‹t“`”d‚ğŒvZ‚·‚é
+        input_grad.resize(output_grad.size());
+        for (int i = 0; i < output_grad.size(); i++) {
+            input_grad[i] = output_grad[i] * (output_[i] > 0);
+        }
+    }
+    virtual void print_weights() const {}
+private:
+    int	input_size_;
+	std::vector<float> output_;
+};
+
 class Net {
 public:
     Net() {}
