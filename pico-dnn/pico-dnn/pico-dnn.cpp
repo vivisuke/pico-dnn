@@ -1,6 +1,7 @@
 ﻿#include <iostream>
+#include "pico-dnn.h"
 
 int main()
 {
-    std::cout << "Hello World!\n";
+    std::cout << "\nOK.\n";
 }
