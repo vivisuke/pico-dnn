@@ -20,13 +20,17 @@ int main()
 
 		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(2, 2))
 				<< shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(2, 1));
-		vector<float> in = { 1, 1 }, out;
-		net.forward(in, out);
+		//net.print_weights();
+		vector<float> in11 = { 1, 1 }, out;
+		net.forward(in11, out);
 		print_vector("out", out);
-		print_vector("out", out);
-		//cout << "out[] = {";
-		//for (int i = 0; i != out.size(); ++i) cout << out[i] << ", ";
-		//cout << "}\n";
+		for(int k = 0; k != 100; ++k) {
+			vector<float> out_grad = { out[0] - 1.0f }, in_grad;
+			net.backward(out_grad, in_grad);
+			//net.print_weights();
+			net.forward(in11, out);
+			print_vector("out", out);
+		}
 	}
 	//
     std::cout << "\nOK.\n";

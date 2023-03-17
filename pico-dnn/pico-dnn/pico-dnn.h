@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <iostream>
 #include <vector>
 #include <random>
 #include <memory>
@@ -22,6 +23,8 @@ public:
     virtual void forward(const std::vector<float>& input, std::vector<float>& output) = 0;
 	// ‹t“`”dibackward propagationj
     virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) = 0;
+    // d‚İ•\¦
+    virtual void print_weights() const = 0;
 };
 
 //	‘Œ‹‡‘w
@@ -85,6 +88,15 @@ public:
         }
         input_grad = input_grad_;
     }
+    virtual void print_weights() const {
+        for (int i = 0; i < output_size_; ++i) {
+            std::cout << "{";
+            for (int j = 0; j < input_size_; ++j) {
+                std::cout << weights_[i][j] << ", ";
+            }
+            std::cout << "}\n";
+        }
+    }
 
 private:
     int input_size_; // “ü—Í‚ÌŸŒ³”
@@ -98,7 +110,8 @@ private:
     std::vector<float> output_grad_; // o—Í‚ÌŒù”z
     std::vector<float> input_grad_; // “ü—Í‚ÌŒù”z
     std::mt19937 rng_; // —”¶¬Ší
-    const float learning_rate_ = 0.01f; // ŠwK—¦
+    //const float learning_rate_ = 0.01f; // ŠwK—¦
+    const float learning_rate_ = 0.1f; // ŠwK—¦
 };
 //----------------------------------------------------------------------
 
@@ -133,6 +146,11 @@ public:
             temp_output_grad = temp_input_grad;
         }
         input_grad = temp_output_grad;
+    }
+    void print_weights() const {
+	    for (auto layer : layers_) {
+	    	layer->print_weights();
+	    }
     }
 
 private:
