@@ -21,7 +21,7 @@ public:
     virtual ~Layer() {}
     // ‡“`”diforward propagationj
     virtual void forward(const float* input, std::vector<float>& output) = 0;
-    virtual void forward(const std::vector<float>& input, std::vector<float>& output) = 0;
+    //virtual void forward(const std::vector<float>& input, std::vector<float>& output) = 0;
 	// ‹t“`”dibackward propagationj
     virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) = 0;
     // d‚İ•\¦
@@ -65,6 +65,7 @@ public:
         }
         output = output_;
     }
+#if 0
     virtual void forward(const std::vector<float>& input, std::vector<float>& output) override {
         input_ = input;
         for (int i = 0; i < output_size_; ++i) {
@@ -76,6 +77,7 @@ public:
         }
         output = output_;
     }
+#endif
 
     virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) override {
         // ƒoƒCƒAƒX‚ÌŒù”z‚ğŒvZ‚·‚é
@@ -139,6 +141,7 @@ public:
             output[i] = output_[i] = std::max(0.0f, input[i]);
         }
     }
+#if 0
     void forward(const std::vector<float>& input, std::vector<float>& output) override {
         // ReLUŠÖ”‚ğ“K—p‚·‚é
         output.resize(input.size());
@@ -147,6 +150,7 @@ public:
             output[i] = output_[i] = std::max(0.0f, input[i]);
         }
     }
+#endif
 
     void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) override {
         // ReLUŠÖ”‚Ì‹t“`”d‚ğŒvZ‚·‚é
@@ -179,10 +183,11 @@ public:
         //const float* temp_input = input;
         std::vector<float> temp_input = std::vector<float>(input, input_end);
         for (auto layer : layers_) {
-            layer->forward(temp_input, output);
+            layer->forward(&temp_input[0], output);
             temp_input = output;
         }
     }
+#if 0
     void forward(const std::vector<float>& input, std::vector<float>& output) {
         std::vector<float> temp_input = input;
         for (auto layer : layers_) {
@@ -190,6 +195,7 @@ public:
             temp_input = output;
         }
     }
+#endif
 
     // ‹t“`”dibackward propagationj
     void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) {
