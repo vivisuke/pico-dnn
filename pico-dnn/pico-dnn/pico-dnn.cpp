@@ -14,7 +14,7 @@ int main()
 		FullyConnected_Layer fc1(2, 2);
 		FullyConnected_Layer fc2(2, 1);
 	}
-	if( true ) {
+	if( false ) {
 		Net net;
 		//auto* pfc1 = new FullyConnected_Layer{ 2, 2 };
 
@@ -22,14 +22,33 @@ int main()
 				<< shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(2, 1));
 		//net.print_weights();
 		vector<float> in11 = { 1, 1 }, out;
-		net.forward(in11, out);
+		net.forward(&in11[0], &in11[0]+2, out);
 		print_vector("out", out);
 		for(int k = 0; k != 100; ++k) {
 			vector<float> out_grad = { out[0] - 1.0f }, in_grad;
 			net.backward(out_grad, in_grad);
 			//net.print_weights();
-			net.forward(in11, out);
+			net.forward(&in11[0], &in11[0]+2, out);
 			print_vector("out", out);
+		}
+	}
+	if( true ) {
+		Net net;
+		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(2, 2))
+				<< shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(2, 1));
+		//net.print_weights();
+		float in[][3] = {
+			{0, 0, 0}, {0, 1, 0}, {1, 0, 0}, {1, 1, 1}, 		//	{x1, x2, and(x1, x2)}
+		};
+		vector<float> out, in_grad;
+		for(int k = 0; k != 1000000; ++k) {
+			for(int i = 0; i != 4; ++i) {
+				net.forward(&in[i][0], &in[i][2], out);
+				if( k%100 == 99 )
+					print_vector("out", out);
+				vector<float> out_grad = { out[0] - in[i][2] };
+				net.backward(out_grad, in_grad);
+			}
 		}
 	}
 	//

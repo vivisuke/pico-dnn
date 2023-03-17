@@ -20,6 +20,7 @@ public:
     Layer() {}
     virtual ~Layer() {}
     // ‡“`”diforward propagationj
+    virtual void forward(const float* input, std::vector<float>& output) = 0;
     virtual void forward(const std::vector<float>& input, std::vector<float>& output) = 0;
 	// ‹t“`”dibackward propagationj
     virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) = 0;
@@ -53,6 +54,17 @@ public:
         }
     }
 
+    virtual void forward(const float* input, std::vector<float>& output) override {
+        input_ = std::vector<float>(input, input + input_size_);
+        for (int i = 0; i < output_size_; ++i) {
+            float dot = 0;
+            for (int j = 0; j < input_size_; ++j) {
+                dot += weights_[i][j] * input[j];
+            }
+            output_[i] = dot + bias_[i];
+        }
+        output = output_;
+    }
     virtual void forward(const std::vector<float>& input, std::vector<float>& output) override {
         input_ = input;
         for (int i = 0; i < output_size_; ++i) {
@@ -129,6 +141,14 @@ public:
         return *this;
     }
     // ‡“`”diforward propagationj
+    void forward(const float* input, const float* input_end, std::vector<float>& output) {
+        //const float* temp_input = input;
+        std::vector<float> temp_input = std::vector<float>(input, input_end);
+        for (auto layer : layers_) {
+            layer->forward(temp_input, output);
+            temp_input = output;
+        }
+    }
     void forward(const std::vector<float>& input, std::vector<float>& output) {
         std::vector<float> temp_input = input;
         for (auto layer : layers_) {
