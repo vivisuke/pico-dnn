@@ -73,7 +73,7 @@ int main()
 			}
 		}
 	}
-	if( true ) {
+	if( false ) {
 		Net net;
 		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(2, 2))
 				<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(2))
@@ -81,6 +81,28 @@ int main()
 		//net.print_weights();
 		float in[][3] = {
 			{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}, 		//	{x1, x2, or(x1, x2)}
+		};
+		vector<float> out, in_grad;
+		for(int k = 0; k != 1000; ++k) {
+			if( k%100 == 99 )
+				cout << "k = " << k << ":\n";
+			for(int i = 0; i != 4; ++i) {
+				net.forward(&in[i][0], &in[i][2], out);
+				if( k%100 == 99 )
+					print_vector("out", out);
+				vector<float> out_grad = { out[0] - in[i][2] };
+				net.backward(out_grad, in_grad);
+			}
+		}
+	}
+	if( true ) {
+		Net net;
+		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(2, 2))
+				<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(2))
+				<< shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(2, 1));
+		//net.print_weights();
+		float in[][3] = {
+			{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 0}, 		//	{x1, x2, xor(x1, x2)}
 		};
 		vector<float> out, in_grad;
 		for(int k = 0; k != 1000; ++k) {
