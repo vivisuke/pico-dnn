@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <random>
+#include <memory>
 
 //	レイヤー（層）基底クラス
 class Layer {
@@ -23,3 +24,117 @@ public:
     virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) = 0;
 };
 
+//	総結合層
+class FullyConnected_Layer : public Layer {
+public:
+    FullyConnected_Layer(int input_size, int output_size) :
+        input_size_(input_size),
+        output_size_(output_size),
+        weights_(output_size, std::vector<float>(input_size, 0)),
+        bias_(output_size, 0),
+        input_(input_size, 0),
+        output_(output_size, 0),
+        grad_weights_(output_size, std::vector<float>(input_size, 0)),
+        grad_bias_(output_size, 0),
+        output_grad_(output_size, 0),
+        input_grad_(input_size, 0),
+        rng_(std::random_device{}())
+    {
+        // 重みとバイアスをランダムに初期化する
+        std::uniform_real_distribution<float> dist(-0.1f, 0.1f);
+        for (int i = 0; i < output_size; ++i) {
+            for (int j = 0; j < input_size; ++j) {
+                weights_[i][j] = dist(rng_);
+            }
+            bias_[i] = dist(rng_);
+        }
+    }
+
+    virtual void forward(const std::vector<float>& input, std::vector<float>& output) override {
+        input_ = input;
+        for (int i = 0; i < output_size_; ++i) {
+            float dot = 0;
+            for (int j = 0; j < input_size_; ++j) {
+                dot += weights_[i][j] * input[j];
+            }
+            output_[i] = dot + bias_[i];
+        }
+        output = output_;
+    }
+
+    virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) override {
+        // バイアスの勾配を計算する
+        for (int i = 0; i < output_size_; ++i) {
+            grad_bias_[i] = output_grad[i];
+        }
+        // 重みと入力の勾配を計算する
+        for (int j = 0; j < input_size_; ++j) {
+            float dot = 0;
+            for (int i = 0; i < output_size_; ++i) {
+                grad_weights_[i][j] = output_grad[i] * input_[j];
+                dot += output_grad[i] * weights_[i][j];
+            }
+            input_grad_[j] = dot;
+        }
+        // 勾配を更新する
+        for (int i = 0; i < output_size_; ++i) {
+            for (int j = 0; j < input_size_; ++j) {
+                weights_[i][j] -= learning_rate_ * grad_weights_[i][j];
+            }
+            bias_[i] -= learning_rate_ * grad_bias_[i];
+        }
+        input_grad = input_grad_;
+    }
+
+private:
+    int input_size_; // 入力の次元数
+    int output_size_; // 出力の次元数
+    std::vector<std::vector<float>> weights_; // 重み
+    std::vector<float> bias_; // バイアス
+    std::vector<float> input_; // 入力
+    std::vector<float> output_; // 出力
+    std::vector<std::vector<float>> grad_weights_; // 重みの勾配
+	std::vector<float> grad_bias_; // バイアスの勾配
+    std::vector<float> output_grad_; // 出力の勾配
+    std::vector<float> input_grad_; // 入力の勾配
+    std::mt19937 rng_; // 乱数生成器
+    const float learning_rate_ = 0.01f; // 学習率
+};
+//----------------------------------------------------------------------
+
+class Net {
+public:
+    Net() {}
+    virtual ~Net() {}
+
+    // ネットワークにレイヤーを追加する
+    void add_layer(std::shared_ptr<Layer> layer) {
+        layers_.push_back(layer);
+    }
+	Net& operator<<(std::shared_ptr<Layer> layer) {
+        add_layer(layer);
+        return *this;
+    }
+    // 順伝播（forward propagation）
+    void forward(const std::vector<float>& input, std::vector<float>& output) {
+        std::vector<float> temp_input = input;
+        for (auto layer : layers_) {
+            layer->forward(temp_input, output);
+            temp_input = output;
+        }
+    }
+
+    // 逆伝播（backward propagation）
+    void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) {
+        std::vector<float> temp_output_grad = output_grad;
+        for (int i = (int)layers_.size() - 1; i >= 0; --i) {
+            std::vector<float> temp_input_grad;
+            layers_[i]->backward(temp_output_grad, temp_input_grad);
+            temp_output_grad = temp_input_grad;
+        }
+        input_grad = temp_output_grad;
+    }
+
+private:
+    std::vector<std::shared_ptr<Layer>> layers_;
+};
