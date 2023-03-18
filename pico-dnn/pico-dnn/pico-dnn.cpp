@@ -13,6 +13,19 @@ const int LBL_HDR_SIZE = 8;
 
 typedef unsigned char uchar;
 
+//	最大値を与える要素インデックスを返す
+//	ただし、v[i] は [0, 1] の範囲とする
+int max_index(const vector<float>& v) {
+	float mx = -1.0f;
+	int mi = -1;
+	for (int i = 0; i != v.size(); ++i) {
+		if( v[i] > mx ) {
+			mx = v[i];
+			mi = i;
+		}
+	}
+	return mi;		
+}
 void print_vector(const string& name, const vector<float>& v) {
 	cout << name << "[] = {";
 	float mx = -1.0f;
@@ -190,6 +203,48 @@ int main()
 			net.backward(out_grad, in_grad);
 		}
 	}
+	if( false ) {
+		Net net;
+		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(MNIST_IMG_SZ, 1024))
+				<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(1024))
+				//<< shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(1024, 1024))
+				//<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(1024))
+				<< shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(1024, 10))
+				<< shared_ptr<Layer>(std::make_shared<SoftMax_Layer>(10));
+	    string images_path = "g:/data_set/MNIST/train-images.idx3-ubyte";
+	    std::ifstream ifs_images(images_path, std::ios::binary);
+	    std::istreambuf_iterator<char> it_ifsi_begin(ifs_images);
+	    std::istreambuf_iterator<char> it_ifsi_end{};
+	    std::vector<unsigned char> images_data(it_ifsi_begin, it_ifsi_end);
+	    cout << "images data size = " << images_data.size() << "\n";
+	    string labels_path = "g:/data_set/MNIST/train-labels.idx1-ubyte";
+	    std::ifstream ifs_labels(labels_path, std::ios::binary);
+	    std::istreambuf_iterator<char> it_ifsl_begin(ifs_labels);
+	    std::istreambuf_iterator<char> it_ifsl_end{};
+	    std::vector<unsigned char> labels_data(it_ifsl_begin, it_ifsl_end);
+	    cout << "labels data size = " << labels_data.size() << "\n";
+		//	先頭10個のデータで100回学習
+		vector<float> in(MNIST_IMG_SZ), out, in_grad;
+		for(int k = 0; k != 100; ++k) {
+		    for(int i = 0; i != 10; ++i) {
+		    	uchar *ptr = &images_data[i*MNIST_IMG_SZ + IMG_HDR_SIZE];
+		    	//print_image(ptr);
+		    	for(int j = 0; j != MNIST_IMG_SZ; ++j) in[j] = (float)*ptr++ / 0x100;
+				net.forward(&in[0], &in[0] + MNIST_IMG_SZ, out);
+				//if( k % 10 == 9 )
+				if( true )
+				{
+					if( i == 0 )
+				    	cout << "k = " << (k+1) << "\n";
+			    	cout << "label = " << (int)labels_data[i + LBL_HDR_SIZE] << "\n";
+					print_vector("out", out);
+				}
+				vector<float> out_grad = out;
+				out_grad[(int)labels_data[i + LBL_HDR_SIZE]] -= 1.0f;
+				net.backward(out_grad, in_grad);
+		    }
+		}
+	}
 	if( true ) {
 		Net net;
 		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(MNIST_IMG_SZ, 1024))
@@ -211,26 +266,29 @@ int main()
 	    std::vector<unsigned char> labels_data(it_ifsl_begin, it_ifsl_end);
 	    cout << "labels data size = " << labels_data.size() << "\n";
 
+		//	全データ（６万）で1回学習
+		int n_correct = 0;
 		vector<float> in(MNIST_IMG_SZ), out, in_grad;
-		for(int k = 0; k != 100; ++k) {
-		    for(int i = 0; i != 10; ++i) {
-		    	uchar *ptr = &images_data[i*MNIST_IMG_SZ + IMG_HDR_SIZE];
-		    	//print_image(ptr);
-		    	for(int j = 0; j != MNIST_IMG_SZ; ++j) in[j] = (float)*ptr++ / 0x100;
-				net.forward(&in[0], &in[0] + MNIST_IMG_SZ, out);
-				//if( k % 10 == 9 )
-				if( true )
-				{
-					if( i == 0 )
-				    	cout << "k = " << (k+1) << "\n";
-			    	cout << "label = " << (int)labels_data[i + LBL_HDR_SIZE] << "\n";
-					print_vector("out", out);
-				}
-				vector<float> out_grad = out;
-				out_grad[(int)labels_data[i + LBL_HDR_SIZE]] -= 1.0f;
-				net.backward(out_grad, in_grad);
-		    }
-		}
+	    for(int i = 0; i != 60000; ++i) {
+	    	int t = (int)labels_data[i + LBL_HDR_SIZE];	//	教師値
+	    	uchar *ptr = &images_data[i*MNIST_IMG_SZ + IMG_HDR_SIZE];	//	当該画像データ
+	    	//print_image(ptr);
+	    	for(int j = 0; j != MNIST_IMG_SZ; ++j) in[j] = (float)*ptr++ / 0x100;
+			net.forward(&in[0], &in[0] + MNIST_IMG_SZ, out);
+			int mi = max_index(out);
+			if( mi == t ) n_correct += 1;
+			if( i % 100 == 99 )
+			{
+		    	cout << "image: #" << (i+1) << "\n";
+		    	cout << "label = " << t << "\n";
+				print_vector("out", out);
+				cout << "correct rate = " << n_correct << "%\n";
+				n_correct = 0;
+			}
+			vector<float> out_grad = out;
+			out_grad[(int)labels_data[i + LBL_HDR_SIZE]] -= 1.0f;
+			net.backward(out_grad, in_grad);
+	    }
 	}
 	//
     std::cout << "\nOK.\n";
