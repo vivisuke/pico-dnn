@@ -1,5 +1,6 @@
 ﻿#include <iostream>
 #include <fstream>      // std::ifstream
+#include <string>
 #include "pico-dnn.h"
 
 using namespace std;
@@ -14,8 +15,20 @@ typedef unsigned char uchar;
 
 void print_vector(const string& name, const vector<float>& v) {
 	cout << name << "[] = {";
-	for (int i = 0; i != v.size(); ++i) cout << v[i] << ", ";
-	cout << "}\n";
+	float mx = -1.0f;
+	int mi = 0;
+	for (int i = 0; i != v.size(); ++i) {
+		if( v[i] > mx ) {
+			mx = v[i];
+			mi = i;
+		}
+		string txt = to_string(v[i]);
+		if( txt.size() > 5 ) txt = txt.substr(0, 5);
+		cout << txt << ", ";
+		//cout << v[i] << ", ";
+	}
+	cout << "}, max ix = " << mi << "\n";
+	//cout << "}\n";
 }
 void print_image(const uchar* ptr) {
 	for(int y = 0; y != MNIST_IMG_HT; ++y) {
@@ -178,6 +191,13 @@ int main()
 		}
 	}
 	if( true ) {
+		Net net;
+		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(MNIST_IMG_SZ, 1024))
+				<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(1024))
+				//<< shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(1024, 1024))
+				//<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(1024))
+				<< shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(1024, 10))
+				<< shared_ptr<Layer>(std::make_shared<SoftMax_Layer>(10));
 	    string images_path = "g:/data_set/MNIST/train-images.idx3-ubyte";
 	    std::ifstream ifs_images(images_path, std::ios::binary);
 	    std::istreambuf_iterator<char> it_ifsi_begin(ifs_images);
@@ -191,10 +211,26 @@ int main()
 	    std::vector<unsigned char> labels_data(it_ifsl_begin, it_ifsl_end);
 	    cout << "labels data size = " << labels_data.size() << "\n";
 
-	    for(int i = 0; i != 10; ++i) {
-	    	cout << "label = " << (int)labels_data[i + LBL_HDR_SIZE] << "\n";
-	    	print_image(&images_data[i*MNIST_IMG_SZ + IMG_HDR_SIZE]);
-	    }
+		vector<float> in(MNIST_IMG_SZ), out, in_grad;
+		for(int k = 0; k != 100; ++k) {
+		    for(int i = 0; i != 10; ++i) {
+		    	uchar *ptr = &images_data[i*MNIST_IMG_SZ + IMG_HDR_SIZE];
+		    	//print_image(ptr);
+		    	for(int j = 0; j != MNIST_IMG_SZ; ++j) in[j] = (float)*ptr++ / 0x100;
+				net.forward(&in[0], &in[0] + MNIST_IMG_SZ, out);
+				//if( k % 10 == 9 )
+				if( true )
+				{
+					if( i == 0 )
+				    	cout << "k = " << (k+1) << "\n";
+			    	cout << "label = " << (int)labels_data[i + LBL_HDR_SIZE] << "\n";
+					print_vector("out", out);
+				}
+				vector<float> out_grad = out;
+				out_grad[(int)labels_data[i + LBL_HDR_SIZE]] -= 1.0f;
+				net.backward(out_grad, in_grad);
+		    }
+		}
 	}
 	//
     std::cout << "\nOK.\n";
