@@ -4,10 +4,28 @@
 
 using namespace std;
 
+const int MNIST_IMG_WD = 28;
+const int MNIST_IMG_HT = 28;
+const int MNIST_IMG_SZ = MNIST_IMG_WD*MNIST_IMG_HT;
+const int IMG_HDR_SIZE = 16;
+const int LBL_HDR_SIZE = 8;
+
+typedef unsigned char uchar;
+
 void print_vector(const string& name, const vector<float>& v) {
 	cout << name << "[] = {";
 	for (int i = 0; i != v.size(); ++i) cout << v[i] << ", ";
 	cout << "}\n";
+}
+void print_image(const uchar* ptr) {
+	for(int y = 0; y != MNIST_IMG_HT; ++y) {
+		for(int x = 0; x != MNIST_IMG_WD; ++x) {
+			auto ch = *ptr++;
+			if( ch == 0 ) cout << "・";
+			else cout << "■";
+		}
+		cout << "\n";
+	}
 }
 int main()
 {
@@ -160,8 +178,6 @@ int main()
 		}
 	}
 	if( true ) {
-		const int IMG_HDR_SIZE = 16;
-		const int LBL_HDR_SIZE = 8;
 	    string images_path = "g:/data_set/MNIST/train-images.idx3-ubyte";
 	    std::ifstream ifs_images(images_path, std::ios::binary);
 	    std::istreambuf_iterator<char> it_ifsi_begin(ifs_images);
@@ -175,6 +191,10 @@ int main()
 	    std::vector<unsigned char> labels_data(it_ifsl_begin, it_ifsl_end);
 	    cout << "labels data size = " << labels_data.size() << "\n";
 
+	    for(int i = 0; i != 10; ++i) {
+	    	cout << "label = " << (int)labels_data[i + LBL_HDR_SIZE] << "\n";
+	    	print_image(&images_data[i*MNIST_IMG_SZ + IMG_HDR_SIZE]);
+	    }
 	}
 	//
     std::cout << "\nOK.\n";
