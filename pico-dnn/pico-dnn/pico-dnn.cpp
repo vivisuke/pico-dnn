@@ -1,4 +1,5 @@
 ﻿#include <iostream>
+#include <fstream>      // std::ifstream
 #include "pico-dnn.h"
 
 using namespace std;
@@ -139,7 +140,7 @@ int main()
 			}
 		}
 	}
-	if( true ) {
+	if( false ) {
 		Net net;
 		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(4, 10))
 				<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(10))
@@ -157,6 +158,23 @@ int main()
 			out_grad[(int)in[0][4]] -= 1.0f;
 			net.backward(out_grad, in_grad);
 		}
+	}
+	if( true ) {
+		const int IMG_HDR_SIZE = 16;
+		const int LBL_HDR_SIZE = 8;
+	    string images_path = "g:/data_set/MNIST/train-images.idx3-ubyte";
+	    std::ifstream ifs_images(images_path, std::ios::binary);
+	    std::istreambuf_iterator<char> it_ifsi_begin(ifs_images);
+	    std::istreambuf_iterator<char> it_ifsi_end{};
+	    std::vector<unsigned char> images_data(it_ifsi_begin, it_ifsi_end);
+	    cout << "images data size = " << images_data.size() << "\n";
+	    string labels_path = "g:/data_set/MNIST/train-labels.idx1-ubyte";
+	    std::ifstream ifs_labels(labels_path, std::ios::binary);
+	    std::istreambuf_iterator<char> it_ifsl_begin(ifs_labels);
+	    std::istreambuf_iterator<char> it_ifsl_end{};
+	    std::vector<unsigned char> labels_data(it_ifsl_begin, it_ifsl_end);
+	    cout << "labels data size = " << labels_data.size() << "\n";
+
 	}
 	//
     std::cout << "\nOK.\n";
