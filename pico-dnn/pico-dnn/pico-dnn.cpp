@@ -117,7 +117,7 @@ int main()
 			}
 		}
 	}
-	if( true ) {
+	if( false ) {
 		Net net;
 		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(2, 10))
 				<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(10))
@@ -139,6 +139,39 @@ int main()
 			}
 		}
 	}
+	if( true ) {
+		Net net;
+		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(4, 10))
+				<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(10))
+				<< shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(10, 3))
+				<< shared_ptr<Layer>(std::make_shared<SoftMax_Layer>(3));
+		float in[][5] = {
+			{0, 0, 1, 0, 0, }, 		//	{0|1}..., {0|1|2}
+		};
+		cout << "t = " << (int)in[0][4] << "\n";
+		vector<float> out, in_grad;
+		for(int i = 0; i != 20; ++i) {
+			net.forward(&in[0][0], &in[0][5], out);
+			print_vector("out", out);
+			vector<float> out_grad = out;
+			out_grad[(int)in[0][4]] -= 1.0f;
+			net.backward(out_grad, in_grad);
+		}
+	}
 	//
     std::cout << "\nOK.\n";
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

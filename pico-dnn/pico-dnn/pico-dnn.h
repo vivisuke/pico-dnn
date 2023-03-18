@@ -127,7 +127,6 @@ private:
     //const float learning_rate_ = 0.01f; // ŠwK—¦
     const float learning_rate_ = 0.1f; // ŠwK—¦
 };
-//----------------------------------------------------------------------
 
 class ReLU_Layer : public Layer {
 public:
@@ -164,7 +163,47 @@ private:
     int	input_size_;
 	std::vector<float> output_;
 };
+class SoftMax_Layer : public Layer {
+public:
+    SoftMax_Layer(int input_size) : input_size_(input_size) {}
+    virtual ~SoftMax_Layer() {}
 
+    void forward(const float* input, std::vector<float>& output) override {
+        // SoftmaxŠÖ”‚ğ“K—p‚·‚é
+        output.resize(input_size_);
+        output_.resize(input_size_);
+        auto mx = *std::max_element(input, input + input_size_);
+        float sum = 0.0f;
+        for (int i = 0; i < input_size_; i++) {
+            output_[i] = std::exp(input[i] - mx);
+            sum += output_[i];
+        }
+        for (int i = 0; i < output.size(); i++) {
+            output[i] = output_[i] /= sum;
+        }
+    }
+    void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) override {
+        // SoftmaxŠÖ”‚Ì‹t“`”d‚ğŒvZ‚·‚éB‚½‚¾‚µ grad ‚ğƒXƒ‹[‚·‚é‚¾‚¯
+#if 1
+        input_grad = output_grad;
+#else
+        input_grad.resize(output_grad.size());
+        float sum = 0.0f;
+        for (int i = 0; i < output_grad.size(); i++) {
+            sum += output_[i] * output_grad[i];
+        }
+        for (int i = 0; i < input_grad.size(); i++) {
+            input_grad[i] = output_[i] * (output_grad[i] - sum);
+        }
+#endif
+    }
+    virtual void print_weights() const {}
+private:
+    int	input_size_;
+	std::vector<float> output_;
+};
+
+//----------------------------------------------------------------------
 class Net {
 public:
     Net() {}
