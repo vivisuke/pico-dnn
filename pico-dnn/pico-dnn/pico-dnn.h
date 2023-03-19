@@ -23,7 +23,9 @@ public:
     virtual void forward(const float* input, std::vector<float>& output) = 0;
     //virtual void forward(const std::vector<float>& input, std::vector<float>& output) = 0;
 	// 逆伝播（backward propagation）
-    virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) = 0;
+    virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool online=true) = 0;
+    //	ミニバッチ重み更新
+    virtual void update(int NB) = 0;
     // 重み表示
     virtual void print_weights() const = 0;
 };
@@ -35,7 +37,9 @@ public:
         input_size_(input_size),
         output_size_(output_size),
         weights_(output_size, std::vector<float>(input_size, 0)),
+        dweights_(output_size, std::vector<float>(input_size, 0)),
         bias_(output_size, 0),
+        dbias_(output_size, 0),
         input_(input_size, 0),
         output_(output_size, 0),
         grad_weights_(output_size, std::vector<float>(input_size, 0)),
@@ -79,7 +83,7 @@ public:
     }
 #endif
 
-    virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) override {
+    virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool online) override {
         // バイアスの勾配を計算する
         for (int i = 0; i < output_size_; ++i) {
             grad_bias_[i] = output_grad[i];
@@ -94,13 +98,32 @@ public:
             input_grad_[j] = dot;
         }
         // 勾配を更新する
-        for (int i = 0; i < output_size_; ++i) {
-            for (int j = 0; j < input_size_; ++j) {
-                weights_[i][j] -= learning_rate_ * grad_weights_[i][j];
-            }
-            bias_[i] -= learning_rate_ * grad_bias_[i];
+        if( online ) {
+	        for (int i = 0; i < output_size_; ++i) {
+	            for (int j = 0; j < input_size_; ++j) {
+	                weights_[i][j] -= learning_rate_ * grad_weights_[i][j];
+	            }
+	            bias_[i] -= learning_rate_ * grad_bias_[i];
+	        }
+        } else {
+	        for (int i = 0; i < output_size_; ++i) {
+	            for (int j = 0; j < input_size_; ++j) {
+	                dweights_[i][j] -= learning_rate_ * grad_weights_[i][j];
+	            }
+	            dbias_[i] -= learning_rate_ * grad_bias_[i];
+	        }
         }
         input_grad = input_grad_;
+    }
+    virtual void update(int NB) {
+        for (int i = 0; i < output_size_; ++i) {
+            for (int j = 0; j < input_size_; ++j) {
+                weights_[i][j] -= dweights_[i][j] / NB;
+                dweights_[i][j] = 0;
+            }
+            bias_[i] -= dbias_[i] / NB;
+            dbias_[i] = 0;
+        }
     }
     virtual void print_weights() const {
         for (int i = 0; i < output_size_; ++i) {
@@ -111,12 +134,13 @@ public:
             std::cout << "}\n";
         }
     }
-
 private:
     int input_size_; // 入力の次元数
     int output_size_; // 出力の次元数
     std::vector<std::vector<float>> weights_; // 重み
+    std::vector<std::vector<float>> dweights_; // 重み
     std::vector<float> bias_; // バイアス
+    std::vector<float> dbias_; // バイアス差分
     std::vector<float> input_; // 入力
     std::vector<float> output_; // 出力
     std::vector<std::vector<float>> grad_weights_; // 重みの勾配
@@ -151,13 +175,14 @@ public:
     }
 #endif
 
-    void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) override {
+    void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool) override {
         // ReLU関数の逆伝播を計算する
         input_grad.resize(output_grad.size());
         for (int i = 0; i < output_grad.size(); i++) {
             input_grad[i] = output_grad[i] * (output_[i] > 0);
         }
     }
+    virtual void update(int NB) {}
     virtual void print_weights() const {}
 private:
     int	input_size_;
@@ -182,7 +207,7 @@ public:
             output[i] = output_[i] /= sum;
         }
     }
-    void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) override {
+    void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool) override {
         // Softmax関数の逆伝播を計算する。ただし grad をスルーするだけ
 #if 1
         input_grad = output_grad;
@@ -197,6 +222,7 @@ public:
         }
 #endif
     }
+    virtual void update(int NB) {}
     virtual void print_weights() const {}
 private:
     int	input_size_;
@@ -245,6 +271,11 @@ public:
             temp_output_grad = temp_input_grad;
         }
         input_grad = temp_output_grad;
+    }
+    void update(int NB) {
+        for (int i = (int)layers_.size() - 1; i >= 0; --i) {
+            layers_[i]->update(NB);
+        }
     }
     void print_weights() const {
 	    for (auto layer : layers_) {
