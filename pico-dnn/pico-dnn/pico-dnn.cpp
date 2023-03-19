@@ -1,6 +1,7 @@
 ﻿#include <iostream>
 #include <fstream>      // std::ifstream
 #include <string>
+#include <chrono>
 #include "pico-dnn.h"
 
 using namespace std;
@@ -55,6 +56,7 @@ void print_image(const uchar* ptr) {
 }
 int main()
 {
+	auto start = std::chrono::system_clock::now();      // 計測スタート時刻を保存
 	if( false ) {
 		FullyConnected_Layer fc1(2, 2);
 		FullyConnected_Layer fc2(2, 1);
@@ -277,12 +279,12 @@ int main()
 			net.forward(&in[0], &in[0] + MNIST_IMG_SZ, out);
 			int mi = max_index(out);
 			if( mi == t ) n_correct += 1;
-			if( i % 100 == 99 )
+			if( i % 1000 == 999 )
 			{
 		    	cout << "image: #" << (i+1) << "\n";
 		    	cout << "label = " << t << "\n";
 				print_vector("out", out);
-				cout << "correct rate = " << n_correct << "%\n";
+				cout << "correct rate = " << n_correct/10.0 << "%\n";
 				n_correct = 0;
 			}
 			vector<float> out_grad = out;
@@ -290,8 +292,12 @@ int main()
 			net.backward(out_grad, in_grad);
 	    }
 	}
+	auto end = std::chrono::system_clock::now();       // 計測終了時刻を保存
+    auto dur = end - start;        // 要した時間を計算
+    auto msec = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
 	//
     std::cout << "\nOK.\n";
+    cout << "duration = " << msec << "millisec.\n";
 }
 
 
