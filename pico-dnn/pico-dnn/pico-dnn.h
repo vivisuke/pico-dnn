@@ -25,7 +25,7 @@ public:
 	// 逆伝播（backward propagation）
     virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool online=true) = 0;
     //	ミニバッチ重み更新
-    virtual void update(int NB) = 0;
+    virtual void update(int BSZ) = 0;
     // 重み表示
     virtual void print_weights() const = 0;
 };
@@ -115,13 +115,13 @@ public:
         }
         input_grad = input_grad_;
     }
-    virtual void update(int NB) {
+    virtual void update(int BSZ) {
         for (int i = 0; i < output_size_; ++i) {
             for (int j = 0; j < input_size_; ++j) {
-                weights_[i][j] -= dweights_[i][j] / NB;
+                weights_[i][j] -= dweights_[i][j] / BSZ;
                 dweights_[i][j] = 0;
             }
-            bias_[i] -= dbias_[i] / NB;
+            bias_[i] -= dbias_[i] / BSZ;
             dbias_[i] = 0;
         }
     }
@@ -182,7 +182,7 @@ public:
             input_grad[i] = output_grad[i] * (output_[i] > 0);
         }
     }
-    virtual void update(int NB) {}
+    virtual void update(int BSZ) {}
     virtual void print_weights() const {}
 private:
     int	input_size_;
@@ -222,7 +222,7 @@ public:
         }
 #endif
     }
-    virtual void update(int NB) {}
+    virtual void update(int BSZ) {}
     virtual void print_weights() const {}
 private:
     int	input_size_;
@@ -263,18 +263,18 @@ public:
 #endif
 
     // 逆伝播（backward propagation）
-    void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad) {
+    void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool online=true) {
         std::vector<float> temp_output_grad = output_grad;
         for (int i = (int)layers_.size() - 1; i >= 0; --i) {
             std::vector<float> temp_input_grad;
-            layers_[i]->backward(temp_output_grad, temp_input_grad);
+            layers_[i]->backward(temp_output_grad, temp_input_grad, online);
             temp_output_grad = temp_input_grad;
         }
         input_grad = temp_output_grad;
     }
-    void update(int NB) {
+    void update(int BSZ) {
         for (int i = (int)layers_.size() - 1; i >= 0; --i) {
-            layers_[i]->update(NB);
+            layers_[i]->update(BSZ);
         }
     }
     void print_weights() const {
