@@ -228,6 +228,98 @@ private:
     int	input_size_;
 	std::vector<float> output_;
 };
+#if 0
+//	正規化レイヤー
+class NormalizationLayer : public Layer {
+public:
+    NormalizationLayer(float eps = 1e-5) : eps_(eps) {}
+    virtual ~NormalizationLayer() {}
+    
+    virtual void forward(const float* input, std::vector<float>& output) override {
+        // バッチ平均とバッチ分散を計算する
+        output.resize(input_size_);
+        for (int i = 0; i < input_size_; i++) {
+            float mean = 0.0;
+            float var = 0.0;
+            for (int j = 0; j < batch_size_; j++) {
+                mean += input[j * input_size_ + i];
+            }
+            mean /= batch_size_;
+            for (int j = 0; j < batch_size_; j++) {
+                var += (input[j * input_size_ + i] - mean) * (input[j * input_size_ + i] - mean);
+            }
+            var /= batch_size_;
+            output[i] = (input[i] - mean) / (std::sqrt(var + eps_));
+        }
+    }
+
+    virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool online=true) override {
+        // 入力勾配を計算する
+        input_grad.resize(input_size_ * batch_size_);
+        for (int i = 0; i < input_size_; i++) {
+            float mean = 0.0;
+            float var = 0.0;
+            for (int j = 0; j < batch_size_; j++) {
+                mean += input[j * input_size_ + i];
+            }
+            mean /= batch_size_;
+            for (int j = 0; j < batch_size_; j++) {
+                var += (input[j * input_size_ + i] - mean) * (input[j * input_size_ + i] - mean);
+            }
+            var /= batch_size_;
+            for (int j = 0; j < batch_size_; j++) {
+                float z = (input[j * input_size_ + i] - mean) / std::sqrt(var + eps_);
+                input_grad[j * input_size_ + i] = output_grad[i] / std::sqrt(var + eps_) - z * (output_grad[i] * z) / (batch_size_ * std::sqrt(var + eps_));
+            }
+        }
+    }
+    
+    virtual void update(int BSZ) override {}
+
+protected:
+    float eps_;
+    int input_size_;
+    int batch_size_;
+};
+#endif
+#if 0
+//	正則化レイヤー
+class RegularizationLayer : public Layer {
+public:
+    RegularizationLayer(float l1_coef, float l2_coef) : l1_coef_(l1_coef), l2_coef_(l2_coef) {}
+    virtual ~RegularizationLayer() {}
+    
+    virtual void forward(const float* input, std::vector<float>& output) override {
+        // 正則化項を計算し、出力に加える
+        float l1_reg = 0.0;
+        float l2_reg = 0.0;
+        for (int i = 0; i < input_size_; i++) {
+            l1_reg += std::abs(input[i]);
+            l2_reg += input[i] * input[i];
+        }
+        output.resize(input_size_);
+        for (int i = 0; i < input_size_; i++) {
+            output[i] = input[i] + l1_coef_ * l1_reg + l2_coef_ * l2_reg;
+        }
+    }
+
+    virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool online=true) override {
+        // 入力勾配を計算する
+        input_grad.resize(input_size_);
+        for (int i = 0; i < input_size_; i++) {
+            float sign = input[i] > 0 ? 1.0 : -1.0;
+            input_grad[i] = output_grad[i] + l1_coef_ * sign + 2 * l2_coef_ * input[i];
+        }
+    }
+    
+    virtual void update(int BSZ) override {}
+
+protected:
+    float l1_coef_;
+    float l2_coef_;
+    int input_size_;
+};
+#endif
 
 //----------------------------------------------------------------------
 class Net {

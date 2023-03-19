@@ -14,6 +14,42 @@ const int LBL_HDR_SIZE = 8;
 
 typedef unsigned char uchar;
 
+vector<uchar> g_images_train;		//	学習用画像データ
+vector<uchar> g_labels_train;		//	学習用ラベル（教師値）
+vector<uchar> g_images_test;		//	テスト用画像データ
+vector<uchar> g_labels_test;		//	テスト用ラベル（教師値）
+
+void load_train_images_labels() {
+    string images_path = "g:/data_set/MNIST/train-images.idx3-ubyte";
+    std::ifstream ifs_images(images_path, std::ios::binary);
+    std::istreambuf_iterator<char> it_ifsi_begin(ifs_images);
+    std::istreambuf_iterator<char> it_ifsi_end{};
+    g_images_train = std::vector<uchar>(it_ifsi_begin, it_ifsi_end);
+    cout << "train images data size = " << g_images_train.size() << "\n";
+    //
+    string labels_path = "g:/data_set/MNIST/train-labels.idx1-ubyte";
+    std::ifstream ifsl_labels(labels_path, std::ios::binary);
+    std::istreambuf_iterator<char> it_ifsl_begin(ifsl_labels);
+    std::istreambuf_iterator<char> it_ifsl_end{};
+    g_labels_train = std::vector<uchar>(it_ifsl_begin, it_ifsl_end);
+    cout << "train labels data size = " << g_labels_train.size() << "\n";
+}
+void load_test_images_labels() {
+    string images_path = "g:/data_set/MNIST/t10k-images.idx3-ubyte";
+    std::ifstream ifs_images(images_path, std::ios::binary);
+    std::istreambuf_iterator<char> it_ifsi_begin(ifs_images);
+    std::istreambuf_iterator<char> it_ifsi_end{};
+    g_images_test = std::vector<uchar>(it_ifsi_begin, it_ifsi_end);
+    cout << "test images data size = " << g_images_test.size() << "\n";
+    //
+    string labels_path = "g:/data_set/MNIST/t10k-labels.idx1-ubyte";
+    std::ifstream ifsl_labels(labels_path, std::ios::binary);
+    std::istreambuf_iterator<char> it_ifsl_begin(ifsl_labels);
+    std::istreambuf_iterator<char> it_ifsl_end{};
+    g_labels_test = std::vector<uchar>(it_ifsl_begin, it_ifsl_end);
+    cout << "test labels data size = " << g_labels_test.size() << "\n";
+}
+
 //	最大値を与える要素インデックスを返す
 //	ただし、v[i] は [0, 1] の範囲とする
 int max_index(const vector<float>& v) {
@@ -292,7 +328,7 @@ int main()
 			net.backward(out_grad, in_grad);
 	    }
 	}
-	if( true ) {
+	if( false ) {
 		Net net;
 		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(MNIST_IMG_SZ, 1024))
 				<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(1024))
@@ -339,6 +375,10 @@ int main()
 			if( i % BATCH_SIZE == BATCH_SIZE - 1 )
 				net.update(BATCH_SIZE);
 	    }
+	}
+	if( true ) {
+		load_train_images_labels();
+		load_test_images_labels();
 	}
 	auto end = std::chrono::system_clock::now();       // 計測終了時刻を保存
     auto dur = end - start;        // 要した時間を計算
