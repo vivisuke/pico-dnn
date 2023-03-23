@@ -228,58 +228,46 @@ private:
     int	input_size_;
 	std::vector<float> output_;
 };
-#if 0
+#if 1
 //	正規化レイヤー
-class NormalizationLayer : public Layer {
+class Normalization_Layer : public Layer {
 public:
-    NormalizationLayer(float eps = 1e-5) : eps_(eps) {}
-    virtual ~NormalizationLayer() {}
+    Normalization_Layer(int input_size, float eps = 1e-5) : m_input_size(input_size), m_eps(eps) {}
+    virtual ~Normalization_Layer() {}
     
     virtual void forward(const float* input, std::vector<float>& output) override {
         // バッチ平均とバッチ分散を計算する
-        output.resize(input_size_);
-        for (int i = 0; i < input_size_; i++) {
-            float mean = 0.0;
-            float var = 0.0;
-            for (int j = 0; j < batch_size_; j++) {
-                mean += input[j * input_size_ + i];
-            }
-            mean /= batch_size_;
-            for (int j = 0; j < batch_size_; j++) {
-                var += (input[j * input_size_ + i] - mean) * (input[j * input_size_ + i] - mean);
-            }
-            var /= batch_size_;
-            output[i] = (input[i] - mean) / (std::sqrt(var + eps_));
-        }
+        m_input.resize(m_input_size);
+        output.resize(m_input_size);
+        m_mean = 0.0;		//	平均
+        m_var = 0.0;		//	分散
+        for (int i = 0; i < m_input_size; i++)
+            m_mean += m_input[i] = *input++;
+        m_mean /= m_input_size;
+        for (int i = 0; i < m_input_size; i++)
+            m_var += (input[i] - m_mean) * (input[i] - m_mean);
+        for (int i = 0; i < m_input_size; i++)
+	        output[i] = (input[i] - m_mean) / (std::sqrt(m_var + m_eps));
     }
 
     virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool online=true) override {
         // 入力勾配を計算する
-        input_grad.resize(input_size_ * batch_size_);
-        for (int i = 0; i < input_size_; i++) {
-            float mean = 0.0;
-            float var = 0.0;
-            for (int j = 0; j < batch_size_; j++) {
-                mean += input[j * input_size_ + i];
-            }
-            mean /= batch_size_;
-            for (int j = 0; j < batch_size_; j++) {
-                var += (input[j * input_size_ + i] - mean) * (input[j * input_size_ + i] - mean);
-            }
-            var /= batch_size_;
-            for (int j = 0; j < batch_size_; j++) {
-                float z = (input[j * input_size_ + i] - mean) / std::sqrt(var + eps_);
-                input_grad[j * input_size_ + i] = output_grad[i] / std::sqrt(var + eps_) - z * (output_grad[i] * z) / (batch_size_ * std::sqrt(var + eps_));
-            }
+        input_grad.resize(m_input_size);
+        for (int i = 0; i < m_input_size; i++) {
+            float z = (m_input[i] - m_mean) / std::sqrt(m_var + m_eps);
+            input_grad[i] = output_grad[i] / std::sqrt(m_var + m_eps) - z * (output_grad[i] * z) / std::sqrt(m_var + m_eps);
         }
     }
     
     virtual void update(int BSZ) override {}
+    virtual void print_weights() const {}
 
 protected:
-    float eps_;
-    int input_size_;
-    int batch_size_;
+    std::vector<float>	m_input;
+    float m_eps;
+    int m_input_size;
+    float m_mean;		//	平均
+    float m_var;			//	分散
 };
 #endif
 #if 0
@@ -320,6 +308,36 @@ protected:
     int input_size_;
 };
 #endif
+class Conv_Layer : public Layer {
+public:
+    Conv_Layer(int input_channels, int output_channels, int kernel_size, int stride, int padding) {
+        // 畳み込み層の各パラメータを設定する
+        // input_channels: 入力チャネル数
+        // output_channels: 出力チャネル数
+        // kernel_size: カーネルサイズ
+        // stride: ストライド
+        // padding: パディング
+    }
+    virtual ~Conv_Layer() {}
+    // 順伝播（forward propagation）
+    virtual void forward(const float* input, std::vector<float>& output) {
+        // 畳み込み演算を実行する
+        // input: 入力データ
+        // output: 出力データ
+    }
+    // 逆伝播（backward propagation）
+    virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool online=true) {
+        // 逆伝播演算を実行する
+        // output_grad: 出力側の勾配
+        // input_grad: 入力側の勾配
+        // online: trueの場合、逆伝播の計算の一環で重み更新を行う
+    }
+    // ミニバッチ重み更新
+    virtual void update(int BSZ) {
+        // 重みの更新を行う
+        // BSZ: ミニバッチのサイズ
+    }
+};
 
 //----------------------------------------------------------------------
 class Net {

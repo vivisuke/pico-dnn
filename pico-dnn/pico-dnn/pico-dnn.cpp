@@ -376,6 +376,64 @@ int main()
 				net.update(BATCH_SIZE);
 	    }
 	}
+	if( false ) {
+		load_train_images_labels();
+		load_test_images_labels();
+		//
+		cout << "fc -> Norm -> ReLU ->Norm -> Softmax\n";
+		Net net;
+		net << shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(MNIST_IMG_SZ, 1024))
+				<< shared_ptr<Layer>(std::make_shared<Normalization_Layer>(1024))
+				<< shared_ptr<Layer>(std::make_shared<ReLU_Layer>(1024))
+				<< shared_ptr<Layer>(std::make_shared<FullyConnected_Layer>(1024, 10))
+				<< shared_ptr<Layer>(std::make_shared<SoftMax_Layer>(10));
+		cout << "learnning from all data, mini-batch (batch size: 100)\n";
+		//	全データ（６万）で1回学習（１エポック）、ミニバッチ（バッチサイズ：100）
+		const int BATCH_SIZE = 100;
+		int n_correct = 0;
+		vector<float> in(MNIST_IMG_SZ), out, in_grad;
+	    for(int i = 0; i != 60000; ++i) {
+	    	int t = (int)g_labels_train[i + LBL_HDR_SIZE];	//	教師値
+	    	uchar *ptr = &g_images_train[i*MNIST_IMG_SZ + IMG_HDR_SIZE];	//	当該画像データ
+	    	//print_image(ptr);
+	    	for(int j = 0; j != MNIST_IMG_SZ; ++j) in[j] = (float)*ptr++ / 0x100;
+			net.forward(&in[0], &in[0] + MNIST_IMG_SZ, out);
+			int mi = max_index(out);
+			if( mi == t ) n_correct += 1;
+			if( i % 1000 == 999 )
+			{
+		    	cout << "image: #" << (i+1) << "\n";
+		    	cout << "label = " << t << "\n";
+				print_vector("out", out);
+				cout << "correct rate = " << n_correct/10.0 << "%\n";
+				n_correct = 0;
+			}
+			vector<float> out_grad = out;
+			out_grad[(int)g_labels_train[i + LBL_HDR_SIZE]] -= 1.0f;
+			net.backward(out_grad, in_grad);
+			if( i % BATCH_SIZE == BATCH_SIZE - 1 )
+				net.update(BATCH_SIZE);
+	    }
+	    //	テストデータで正解率計算
+	    cout << "testing with test data...\n";
+	    const int N_TEST_DATA = 10000;
+	    for(int i = 0; i != N_TEST_DATA; ++i) {
+	    	int t = (int)g_labels_test[i + LBL_HDR_SIZE];	//	教師値
+	    	uchar *ptr = &g_images_test[i*MNIST_IMG_SZ + IMG_HDR_SIZE];	//	当該画像データ
+	    	//print_image(ptr);
+	    	for(int j = 0; j != MNIST_IMG_SZ; ++j) in[j] = (float)*ptr++ / 0x100;
+			net.forward(&in[0], &in[0] + MNIST_IMG_SZ, out);
+			int mi = max_index(out);
+			if( mi == t ) n_correct += 1;
+			if( i % 1000 == 999 )
+			{
+		    	cout << "image: #" << (i+1) << "\n";
+		    	cout << "label = " << t << "\n";
+				print_vector("out", out);
+			}
+	    }
+		cout << "correct rate = " << (double)n_correct/N_TEST_DATA*100 << "%\n";
+	}
 	if( true ) {
 		load_train_images_labels();
 		load_test_images_labels();
