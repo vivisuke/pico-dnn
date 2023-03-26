@@ -308,37 +308,90 @@ protected:
     int input_size_;
 };
 #endif
-class Conv_Layer : public Layer {
+class ConvolutionalLayer : public Layer {
 public:
-    Conv_Layer(int input_channels, int output_channels, int kernel_size, int stride, int padding) {
-        // 畳み込み層の各パラメータを設定する
-        // input_channels: 入力チャネル数
-        // output_channels: 出力チャネル数
-        // kernel_size: カーネルサイズ
-        // stride: ストライド
-        // padding: パディング
-    }
-    virtual ~Conv_Layer() {}
-    // 順伝播（forward propagation）
-    virtual void forward(const float* input, std::vector<float>& output) {
-        // 畳み込み演算を実行する
-        // input: 入力データ
-        // output: 出力データ
-    }
-    // 逆伝播（backward propagation）
-    virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool online=true) {
-        // 逆伝播演算を実行する
-        // output_grad: 出力側の勾配
-        // input_grad: 入力側の勾配
-        // online: trueの場合、逆伝播の計算の一環で重み更新を行う
-    }
-    // ミニバッチ重み更新
-    virtual void update(int BSZ) {
-        // 重みの更新を行う
-        // BSZ: ミニバッチのサイズ
-    }
-};
+    ConvolutionalLayer(int input_height, int input_width, /*int input_channels,*/ int kernel_size, int num_kernels) :
+        input_height_(input_height),
+        input_width_(input_width),
+        //input_channels_(input_channels),		//	チャンネル数は１のみとする
+        kernel_size_(kernel_size),			//	カーネル（フィルター）サイズ、正方形の一辺長さ
+        num_kernels_(num_kernels)
+    {
+        // 畳み込みカーネルをランダムに初期化
+        weights_.resize(num_kernels_);
+        for (int i = 0; i < num_kernels_; ++i) {
+            weights_[i].resize(kernel_size_ * kernel_size_ /** input_channels_*/);
+            for (int j = 0; j < kernel_size_ * kernel_size_ /** input_channels_*/; ++j) {
+                //##weights_[i][j] = static_cast<float>(rand()) / RAND_MAX - 0.5f;
+            }
+        }
 
+        // バイアスを0で初期化
+        biases_.resize(num_kernels_, 0.0f);
+
+        // 出力テンソルのサイズを計算
+        output_height_ = input_height_ - kernel_size_ + 1;
+        output_width_ = input_width_ - kernel_size_ + 1;
+        output_channels_ = num_kernels_;
+    }
+
+    virtual ~ConvolutionalLayer() {}
+
+    virtual void forward(const float* input, std::vector<float>& output) override {
+#if 0
+        output.resize(output_height_ * output_width_ * output_channels_);
+        // 入力テンソルを3次元配列に変換
+        std::vector<std::vector<std::vector<float>>> input_array(input_channels_,
+            std::vector<std::vector<float>>(input_height_,
+                std::vector<float>(input_width_, 0.0f)));
+        int input_index = 0;
+        for (int c = 0; c < input_channels_; ++c) {
+            for (int h = 0; h < input_height_; ++h) {
+                for (int w = 0; w < input_width_; ++w) {
+                    input_array[c][h][w] = input[input_index++];
+                }
+            }
+        }
+
+        // 畳み込み演算を実行
+        for (int k = 0; k < num_kernels_; ++k) {
+            for (int h = 0; h < output_height_; ++h) {
+                for (int w = 0; w < output_width_; ++w) {
+                    float sum = 0.0f;
+                    for (int c = 0; c < input_channels_; ++c) {
+                        for (int kh = 0; kh < kernel_size_; ++kh) {
+                            for (int kw = 0; kw < kernel_size_; ++kw) {
+                                int input_h = h + kh;
+                                int input_w = w + kw;
+                                sum += input_array[c][input_h][input_w] * weights_[k][c * kernel_size_ * kernel_size_ + kh * kernel_size_ + kw];
+                            }
+                        }
+                    }
+                    output[k * output_height_ * output_width_ + h * output_width_ + w] = sum + biases_[k];
+                }
+            }
+        }
+#endif
+    }
+
+    virtual void backward(const std::vector<float>& output_grad, std::vector<float>& input_grad, bool online = true) override {
+        //input_grad.resize(input_height_ * input_width_
+    }
+private:
+    int input_width_;		//	入力画像幅
+    int input_height_;		//	入力画像高さ
+    int input_channels_;	// 入力チャンネル数
+    int out_channels_;		// 出力チャンネル数
+    int kernel_size_;		// 畳み込みカーネルのサイズ（正方形）
+    int num_kernels_;
+    int stride_;			// ストライドのサイズ
+    int padding_;			// パディングのサイズ
+    int output_width_;
+    int output_height_;
+    int output_channels_;
+    std::vector<std::vector<std::vector<float>>> weights_; // 畳み込みカーネルの重み
+    std::vector<float> biases_; // バイアス
+};
 //----------------------------------------------------------------------
 class Net {
 public:
